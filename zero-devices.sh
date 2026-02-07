@@ -49,7 +49,7 @@ do
 	# Zero out header (first 1024) bytes for each device
 	# This count is arbitrarily chosen, but it works
 	# It's faster than wiping each entire disk
-	#dd count=1024 if=/dev/zero of=/dev/disk/by-id/"$device"
+	dd count=1024 if=/dev/zero of=/dev/disk/by-id/"$device"
     
     
 done < "$FILENAME"
