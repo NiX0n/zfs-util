@@ -34,7 +34,7 @@ Recommend n disks where:
 
 In our case, we're going with x = 2, and p = 2; which is n = 4 + 2 = **6**
 
-**WARNING: All the physicaal drives should be the same size.  If they are not, the pool will use the smallest drive and waste the rest.
+**WARNING**: All the physicaal drives should be the same size.  If they are not, the pool will use the smallest drive and waste the rest.
 
 For our "shenanigans" pool, we have 6x 64GB USB3 thumb-drives.  They are connected to a USB 2.0 7-port hub--sacrificing speed for price.
 
@@ -438,5 +438,7 @@ sudo zfs rollback [poolname]@[snapname]
 # Destroy a snaphot
 sudo zfs destroy [poolname]@[snapname]
 ```
+
+## Other Thoughts
 
 
