@@ -1,32 +1,30 @@
-#zfs-util
+# zfs-util
 A set of bash scripts and documentation provding utility ZFS functions.
 
 ## References
-https://ubuntu.com/tutorials/setup-zfs-storage-pool#1-overview
-https://docs.oracle.com/cd/E19253-01/819-5461/index.html
+- https://ubuntu.com/tutorials/setup-zfs-storage-pool#1-overview
+- https://docs.oracle.com/cd/E19253-01/819-5461/index.html
 
 ## Table of Contents
-- Install
-- Disk Pool Selection
-- Disk Preparation
-- Create Pool
-- Test RAID Resilience
-- Test corruption
-- Test Rebuilding RAID
-- Destroy Pool
-- Testing Portability
-
-
-
-
-
+- <a href="#Install">Install</a>
+- <a href="#Disk-Pool-Selection">Disk Pool Selection</a>
+- <a href="#Disk-Preparation">Disk Preparation</a>
+- <a href="#Create-Pool">Create Pool</a>
+- <a href="#Test-Subjects">Test Subjects</a>
+- <a href="#Test-RAID-Resilience">Test RAID Resilience</a>
+- <a href="#Test-corruption">Test corruption</a>
+- <a href="#Test-Rebuilding-RAID">Test Rebuilding RAID</a>
+- <a href="#Benchmarking-">Benchmarking </a>
+- <a href="#Destroy-Pool">Destroy Pool</a>
+- <a href="#Creating-a-RAID10-Pool">Creating a RAID10 Pool</a>
+- <a href="#Snapshots">Snapshots</a>
 
 
 ## Install
+
 ```sh
 sudo apt install zfsutils-linux
 ```
-
 
 ## Disk Pool Selection
 Recommend n disks where: 
@@ -85,7 +83,6 @@ A quick way to generate a `DEVICES` file, if you follow the above is:
 comm -13 disk-by-id.pre disk-by-id.6 > DEVICES
 ```
 
-
 ### Disk Normalization
 All the drives need to be normalized and no existing partitions.  Use gparted or dd if=/dev/zero to wipe partitions on each.  Use `zero-devices.sh` to quickly do this.
 
@@ -98,9 +95,10 @@ sudo ./zero-disks.sh
 ```
 
 
+## Create Pool
+Create a brand new pool.
 
-## Create pool
-
+You can set the mountpoint here, or you can change its mountpoint property later.
 ```sh
 # Using -f because pool devices aren't all exactly the same size
 sudo zpool create -m /mnt/shenanigans -f shenanigans raidz2 \
@@ -153,11 +151,13 @@ sha256sum -c sha256sum
         
 ### Method
 - Physically disconnect/pull a USB drive out of the hub
+- Run an application like VLC streaming data off the pool while you do it
 
 ### Expected ZFS behavior
 - The pool immediately goes **DEGRADED**
 - The missing disk shows as **UNAVAIL** or **OFFLINE**
 - ZFS continues serving data using parity
+- Applications only stop working when pool **SUSPENDED**
 
 ### How to detect
 ```bash
@@ -361,7 +361,18 @@ sudo dd if=/dev/urandom of=/dev/disk/by-id/diskX bs=4K count=10 seek=10000
 
     
 ## Test Rebuilding RAID
+Most of this is covered in our other tests
 
+```bash
+# To bring a working drive back into the pool
+# This should "resilver" the drive automatically
+sudo zpool online shenanigans /dev/disk/by-id/that-disk
+
+# If the old drive is in a non-recoverable state
+# You can run this using a new drive or the same drive (if it's safe)
+sudo zpool replace shenanigans old-disk-id new-disk-id
+
+```
 
 ## Benchmarking 
 ```bash
@@ -382,10 +393,14 @@ fio --name=randrw --directory=/mnt/shenanigans \
 
 
 ## Destroy Pool
+When you just can't have nice things.
+```sh
+sudo zpool destroy shenanigans
+```
 
 
-
-# Creating a RAID10 Pool
+## Creating a RAID10 Pool
+Some alternate RAID configurations
 ```
 sudo zpool create shenanigans \
     mirror \
@@ -398,4 +413,30 @@ zpool create shenanigans \
     mirror disk1 disk2 \
     mirror disk3 disk4 \
     mirror disk5 disk6
+```
+
+
+## Snapshots
+These are kind of useful, in that there's some safety in them.
+
+However, they are dangerous to just roll back to, since they destroy the whole file system; not just a single file.
+
+Clones based on snapshots seem really useful. 
+Mountpoints are likely a necessary property worth changing; 
+otherwise by default you end up nesting a copy of your pool inside itself. 
+
+```sh
+# Create snapshot
+zfs snapshot [poolname]@[snapname]
+
+# List available snapshots
+zfs list -t snapshot
+
+# Rollback to snapshot
+sudo zfs rollback [poolname]@[snapname]
+
+# Destroy a snaphot
+sudo zfs destroy [poolname]@[snapname]
+```
+
 
